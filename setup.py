@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
   name = 'spotify-ws',         
   packages = ['spotifyws'],   
-  version = '0.0.1',      
+  version = '0.0.3',      
   license='MIT',        
   description = 'A python wrapper for spotify web sockets',
   long_description=long_description,
@@ -14,7 +14,7 @@ setup(
   author = 'Jacopo',
   author_email = 'liljackx0@gmail.com',
   url = 'https://github.com/jacopo-degattis/spotifyws',
-  download_url = 'https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v_010.tar.gz',
+  download_url = 'https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v0.0.3.tar.gz',
   keywords = ['SPOTIFY', 'WEBSOCKETS', 'MUSIC'], 
   install_requires=[           
           'requests',
