@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #333;
+        height: 100vh;
+        margin: 0px;
+        padding: 0px;
+    }
+
+    .player-container {
+        display: flex;
+        flex-direction: row;
+        height: 200px;
+        width: 500px;
+        background-color: rgba(255, 255, 255, 0.349);
+        border-radius: 10px;
+    }
+
+    .track-cover {
+        border-radius: 10px;
+    }
+
+    .track-infos {
+        margin-left: 10px;
+        font-family: 'Roboto';
+    }
+
+    .track-title {
+        color: white;
+    }
+
+    .track-artist {
+        color: white;
+    }
+
+    .fa-solid {
+        color: white;
+        font-size: 2rem;
+        margin-right: 5px;
+    }
+
+</style>
+<body>
+    <div class="player-container">
+        <div class="track-cover-container">
+            <img src="" class="track-cover" width="200" />
+        </div>
+        <div>
+            <div class="track-infos">
+                <h2 class="track-title"></h2>
+                <h4 class="track-artist"></h4>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let source = new EventSource("http://localhost:5000/stream")
+        source.onmessage = (event) => {
+            let data = JSON.parse(event.data);
+            let els = data.track.split(':');
+            fetch("http://localhost:5000/track/" + els[els.length - 1]).then(res => res.json()).then(data => {
+                document.querySelector('.track-cover').src = data.album.images[0].url
+                document.querySelector('.track-title').innerHTML = data.name;
+                document.querySelector('.track-artist').innerHTML = data.artists[0].name; // TODO: improve
+            })
+        }
+    </script>
+</body>
+</html>
