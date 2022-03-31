@@ -1,8 +1,0 @@
-requests
-bs4
-pyee
-pycookiecheat
-pydash
-websocket-client
-flask
-flask-session
