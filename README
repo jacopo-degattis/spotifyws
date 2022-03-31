@@ -2,20 +2,13 @@
 
 ## Description
 
-This project is inspired by the project https://github.com/EricRabil/sactivity/. Documentation on how to proceed in order to access Spotify WS was taken from his repo.
+The main purpose of this project is to let the users interact with
+spotify web socket events. Right now the project is still in an alpha version therefore is not complete and may have some bugs.
+Feel free to contribute is any way.
 
-## Launch flask example
+## Basic library usage
 
-In order to launch flask example you need the following commands:
-
-```bash
-$ export FLASK_APP=examples.flask-app.server
-$ flask run
-```
-
-## Basic library example
-
-Example loading chrome cookies
+Example using chrome cookies
 
 ```python
 
@@ -29,7 +22,7 @@ def on_track_change(data):
 
 ```
 
-Example loading cookies from custom file
+Example using cookies from custom file
 
 ```python
 
@@ -43,9 +36,18 @@ def on_track_change(data):
 
 ```
 
+## Launch flask example
+
+In order to launch flask example you need the following commands:
+
+```bash
+$ export FLASK_APP=examples.flask-app.server
+$ flask run
+```
+
 ## About authentication
 
-Right now authentication can only be achieved using local cookies and not OAUTH flow.
+Right now authentication can only be achieved using local cookies and not through OAUTH flow.
 
 ## Note
 

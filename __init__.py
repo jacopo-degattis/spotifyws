@@ -1,1 +1,1 @@
-from ws.spotify import SpotifyWs
+from spotifyws.spotify import SpotifyWs
