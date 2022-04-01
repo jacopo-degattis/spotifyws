@@ -14,7 +14,7 @@ setup(
   author = 'Jacopo',
   author_email = 'liljackx0@gmail.com',
   url = 'https://github.com/jacopo-degattis/spotifyws',
-  download_url = 'https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v0.0.4.tar.gz',
+  download_url = 'https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v.0.0.4.zip',
   keywords = ['SPOTIFY', 'WEBSOCKETS', 'MUSIC'], 
   install_requires=[           
           'requests',
