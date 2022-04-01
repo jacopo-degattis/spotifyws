@@ -78,6 +78,23 @@ def on_pause():
 
 ```
 
+You can also send playback and volume commands to clients
+
+```python
+
+from spotifyws.spotify import SpotifyWs
+
+client = SpotifyWs()
+
+client.send_command("pause")
+client.send_command("resume")
+client.send_command("skip_next")
+client.send_command("skip_prev")
+client.send_command("volume", 30000)
+client.send_command("seek_to", 5000)
+
+```
+
 ## Launch flask example
 
 In order to launch flask example you need the following commands:

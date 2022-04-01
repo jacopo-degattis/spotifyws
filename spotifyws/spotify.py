@@ -289,10 +289,9 @@ class SpotifyWs(object):
             "playback": {
                 "uri": SEND_COMMAND,
                 "method": "POST",
-                "json": { "command": command } if type(command) is dict else { "command": { "endpoint": command } }
+                "json": command
             }
         }
-
 
         for device in self.user_devices:
             if not device['can_play']:
@@ -302,30 +301,28 @@ class SpotifyWs(object):
 
         return res
 
-    def send_command(self, command):
-        """Send player command
+    def send_command(self, command, *args):
 
-        Args:
-            command: str
-            controller: str
-        Returns: void
+        print(command)
+        print(len(args))
+
+        if command in ["pause", "resume", "skip_next", "skip_prev"]:
+            if len(args) != 0:
+                raise Exception("This command take no args, ex. ('resume') ")
+            self._dispatch_command("playback", { "command": { "endpoint": command }})
+            return
         
-        """
+        if command == "volume":
+            if len(args) != 1:
+                raise Exception("You must provide an integer value in order to change volume, ex. ('volume', 3000) ")
+            self._dispatch_command("volume", {"volume": args[0]})
 
-        volume_commands = ["volume"]
-        playback_commands = ["seek_to", "pause", "resume", "skip_next", "skip_prev"]
+        if command == "seek_to":
+            if len(args) != 1:
+                raise Exception("You must provide an integer value in order to seek player position ex. ('seek_to', 5000) ")
+            self._dispatch_command("playback", {"command": {"endpoint": "seek_to", "value": args[0]}})
 
-        if type(command) is dict:
-            for key in command.keys():
-                if key in volume_commands:
-                    self._dispatch_command("volume", command)
-                elif key in playback_commands:
-                    self._dispatch_command("playback", command)
-                elif key == "endpoint":
-                    if command[key] == "seek_to":
-                        self._dispatch_command("playback", command)
-        else:
-            self._dispatch_command("playback", command)
+        return
 
     def init(self):
         """Initialize main library modules
