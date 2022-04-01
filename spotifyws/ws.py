@@ -15,7 +15,7 @@ class WS(threading.Thread):
         self.previous_payload = dict()
         self.access_token = spotify.access_token
         self.event_emitter = spotify.event_emitter
-        threading.Thread.__init__(self, name="websocket")
+        threading.Thread.__init__(self, name="websocket", daemon=True)
 
     def _check_differences(self, keys, new_obj):
         """Check differences between previous and current object
