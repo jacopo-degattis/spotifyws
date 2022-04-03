@@ -303,9 +303,6 @@ class SpotifyWs(object):
 
     def send_command(self, command, *args):
 
-        print(command)
-        print(len(args))
-
         if command in ["pause", "resume", "skip_next", "skip_prev"]:
             if len(args) != 0:
                 raise Exception("This command take no args, ex. ('resume') ")
