@@ -6,6 +6,9 @@ The main purpose of this project is to let the users interact with
 spotify web socket events. Right now the project is still in an alpha version therefore is not complete and may have some bugs.
 Feel free to contribute is any way.
 
+*DISCLAIMER:*
+This library only works with a valid spotify premium subscription
+
 ## Basic library usage
 
 Example using chrome cookies
