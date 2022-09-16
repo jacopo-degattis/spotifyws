@@ -1,4 +1,5 @@
 # Spotify Web Sockets
+[![Downloads](https://pepy.tech/badge/spotify-ws)](https://pepy.tech/project/spotify-ws)
 
 ## Description
 
