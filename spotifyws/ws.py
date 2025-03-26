@@ -5,7 +5,7 @@ import pydash
 import threading
 import websocket
 from pyee.cls import evented
-from spotifyws.config import DEALER_WS_URL
+from .config import DEALER_WS_URL
 
 @evented
 class WS(threading.Thread):
@@ -161,6 +161,13 @@ class WS(threading.Thread):
 
         if msg.get('type') == 'message':
             self._handle_message(msg)
+
+    def _on_close(self, ws, close_status_code, close_msg):
+        print(f"WebSocket closed: {close_status_code}, {close_msg}")
+        self.run()  # Restart WebSocket connection if it closes
+
+    def _on_error(self, ws, error):
+        print(f"WebSocket error: {error}")
         
     def run(self):
         """Thread override method
@@ -170,11 +177,11 @@ class WS(threading.Thread):
         
         """
 
-        # websocket.enableTrace(True)
         ws = websocket.WebSocketApp(
             f"{DEALER_WS_URL}?access_token={self.access_token}",
             on_message = self._on_message,
+            on_close=self._on_close,
+            on_error=self._on_error,
         )
 
         ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-        

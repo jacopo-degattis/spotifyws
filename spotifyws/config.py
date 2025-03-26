@@ -1,8 +1,7 @@
 import string
 import random
 
-EMPTY_COOKIES_ERROR = "Google chrome spotify's cookies are empty. Login or use oauth authentication method !"
-
+GET_SPOTIFY_TOKEN = "https://open.spotify.com/get_access_token"
 WEB_BASE_URI = "https://open.spotify.com"
 SUBSCRIBE_ACTIVITY = "https://api.spotify.com/v1/me/notifications/user"
 REGISTER_DEVICE = "https://guc-spclient.spotify.com/track-playback/v1/devices"

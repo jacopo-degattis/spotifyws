@@ -1,13 +1,14 @@
 import json
+import time
 import queue
 import requests
-from spotifyws.ws import WS
+from .ws import WS
 from bs4 import BeautifulSoup
 from pyee import EventEmitter
-from spotifyws.config import *
+from .config import *
 from pycookiecheat import chrome_cookies
-from spotifyws.logger import logger as logging
-
+from .logger import logger as logging
+from .utils import generate_totp
 
 class SpotifyWs(object):
     debug = None
@@ -18,19 +19,23 @@ class SpotifyWs(object):
     connection_id = None
     event_emitter = None
 
-    def __init__(self, debug=False, cookie_file=None, device_options={}):
-        self.debug = debug
-        self.access_token = ''
+    def __init__(
+        self,
+        verbose=False,
+        cookie_file=None,
+    ):
+        self.verbose = verbose
+        
         self.connection_id = ''
         self.device = DEFAULT_DEVICE
-        self.device_options = device_options
         self.user_devices = []
 
         self.queue = queue.Queue()
-        self.s = requests.Session()
-        self.s = self._init_session(cookie_file)
-        self._get_token_from_html()
-        
+
+        self.cookies = self._load_cookies_from_file(cookie_file)
+        self.access_token = self.get_access_token()
+
+        self.s = self._init_session()
         self.event_emitter = EventEmitter()
         
         self.ws_socket = WS(self)
@@ -38,32 +43,32 @@ class SpotifyWs(object):
 
         self.init()
 
-    def _add_cookiejar(self, session: requests.Session):
-        """Add chrome extracted cookies to session
-        
-        Extract and decrypt cookies from chrome and add
-        them to current 'requests' session.
+    def get_available_devices(self):
+        return self.user_devices
 
-        Args:
-            session: A 'requests.Session' object
-        Returns:
-            Session updated value with added cookies
+    def _load_cookies_from_file(self, cookie_file=None):
+        if not cookie_file:
+            raise Exception("You must provide a file containing your browser session cookies.")
 
-        """
+        # TODO: handle file not existing error
+        cookies = open(cookie_file, "r")
 
-        if self.debug:
-            logging.debug("Loading cookies from local chrome storage")
+        try:
+            parsed_cookies = json.load(cookies)
+            cookies.close()
 
-        cookies = chrome_cookies(WEB_BASE_URI)
+            if type(parsed_cookies) == list:
+                formatted_cookies = {}
+                for cooky in parsed_cookies:
+                    formatted_cookies[cooky["name"]] = cooky["value"]
+                parsed_cookies = formatted_cookies
 
-        if not cookies:
-            raise Exception(EMPTY_COOKIES_ERROR)
+            return parsed_cookies
+        except:
+            logging.error("Invalid JSON file for cookies")
+            exit(-1)
 
-        session.cookies.update(cookies)
-
-        return session
-
-    def _init_session(self, cookie_file=None):
+    def _init_session(self):
         """Initialize current 'requests' session
 
         Args: None
@@ -72,17 +77,32 @@ class SpotifyWs(object):
             'request' session object
 
         """
-
-        session = requests.Session()
         
-        if not cookie_file:
-            session = self._add_cookiejar(session)
-            return session
+        session = requests.Session()
+        session.headers.update({
+            "Authorization": f"Bearer {self.access_token}"
+        })
 
-        with open(cookie_file, "r") as cookies:
-            session.cookies.update(json.load(cookies))
-
+        session.cookies.update(self.cookies)
+        
         return session
+
+    def get_access_token(self):
+        totp, _ = generate_totp()
+
+        response = requests.get(
+            GET_SPOTIFY_TOKEN,
+            params={
+                "reason": 'init',
+                "productType": 'web-player',
+                "totp": totp,
+                "totpVer": 5,
+                "ts": int(time.time() * 1000)
+            },
+            cookies=self.cookies
+        )
+
+        return response.json()["accessToken"]
 
     def on(self, event):
         """Listen for event using a decorator
@@ -116,73 +136,42 @@ class SpotifyWs(object):
 
         return self.event_emitter.on(event)(method)
 
-    def _request(self, uri, method="GET", **kwargs):
-        """Make a http request
+    def fetch(self, method, url, retry=True, **kwargs):
+        response = self.s.request(method, url, **kwargs)
 
-        Make a HTTP request using the provided values
+        if response.status_code == 401:
+            self.access_token = self.get_access_token()
+            return self.fetch(method, url, retry=False, **kwargs)
 
-        Args:
-            uri: str
-            method: str
-            **kwargs: dict
-        Returns:
-            response object 'requests.models.Response'
-
-        """
-
-        HTTP_METHOD = {
-            "POST": self.s.post,
-            "GET": self.s.get,
-            "PUT": self.s.put,
-            "DELETE": self.s.delete
-        }
-        
-        response = HTTP_METHOD[method](uri, **kwargs)
-            
-        if not response.status_code == 200 and self.debug:
-            # NOTE: should this condition throw an exception or just debug a error ?
-            logging.error(f"Error while fetching {uri}. Server returned {response.status_code}")
-            # raise Exception(f"Error while fetching {uri}. Server returned {response.status_code}")
-
+        if not response.status_code == 200 and self.verbose:
+            logging.error(
+                f"Error while fetching {url}. Server returned {response.status_code} status code"
+            )
 
         return response
-
-    def _get_token_from_html(self):
-        """Extract token from plain HTML webpage
-
-        Extract token using web-scraping Beautifoulsoup library
-
-        Args: None
-        Returns: void
-        
-        """
-
-        if self.debug:
-            logging.debug("Fetching spotify token from HTML")
-
-        res = self._request(WEB_BASE_URI)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        scripts = soup.find_all('script')
-
-        for script in scripts:
-            if len(script.contents) > 0:
-                if 'accessToken' in script.contents[0]:
-                    data = json.loads(script.contents[0])
-                    self.access_token = data['accessToken']
-                    self.s.headers.update({"Authorization": f"Bearer {self.access_token}"})
 
     def _subscribe_to_activity(self):
         """Subscribe to events
 
         Args: None
         Returns: request response as 'requests.models.Content'
-        
+
         """
 
-        if self.debug:
+        if self.verbose:
             logging.debug("Subscribing to activities")
         self.connection_id = self.queue.get(block=True)
-        self._request(f"{SUBSCRIBE_ACTIVITY}?connection_id={self.connection_id}", method="PUT")
+
+        # TODO: it almost seems like it doesn't really matter if response status
+        # code is 400 or 200
+        
+        self.s.put(f"{SUBSCRIBE_ACTIVITY}?connection_id={self.connection_id}", headers={
+            "referer": "https://open.spotify.com/",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+        }, data={})
 
     def _register_fake_device(self):
         """Register fake device
@@ -194,7 +183,7 @@ class SpotifyWs(object):
         
         """
 
-        if self.debug:
+        if self.verbose:
             logging.debug("Registering fake device to listen to events")
 
         data = {
@@ -205,13 +194,22 @@ class SpotifyWs(object):
             "volume": 65535
         }
 
-        res = self._request(
+        res = self.fetch(
+            "POST",
             REGISTER_DEVICE,
-            method="POST",
-            json=data
+            retry=True,
+            json=data,
         )
 
         return res
+
+    # def get_available_devices(self):
+    #     res = requests.get("https://api.spotify.com/v1/me/player/devices", headers={
+    #         "Authorization": f"Bearer {token}"
+    #     })
+
+    #     print(res)
+    #     print(res.content)
 
     def _connect_state(self):
         """Connect to spotify state
@@ -221,7 +219,7 @@ class SpotifyWs(object):
 
         """
 
-        if self.debug:
+        if self.verbose:
             logging.debug("Connecting device to spotify state")
 
         default_options = {
@@ -248,10 +246,10 @@ class SpotifyWs(object):
             "member_type": "CONNECT_STATE",
         }
 
-        res = self._request(
+        res = self.fetch(
+            "PUT",
             f"{CONNECT_STATE}hobs_{self.device['device_id']}",
-            method="PUT",
-            json={**default_options, **self.device_options} if self.device_options else default_options,
+            json=default_options,
             headers={"x-spotify-connection-id": self.connection_id}
         )
 
@@ -264,62 +262,49 @@ class SpotifyWs(object):
 
         return res
 
-    def _dispatch_command(self, cmd_type, command):
+    # TODO: maybe add possibility to transfer plyback from one device to another
+    def _dispatch_command(self, command_type, command_payload, target_device):
         """Dispatch command base upon its type
 
         Args:
-            cmd_type: playback | volume
-            command: object
+            command_type: "playback" | "volume"
+            command_payload: Dictionary containing the command to dispatch
         Returns:
             HTTP request response
         
         """
 
-        # Playback for audio seek, next, prev, play/pause
-        # Volume for volume level control
-        if not cmd_type in ["volume", "playback"]:
-            raise Exception(f"Command must be either 'volume' or 'playback', {cmd_type} was given")
+        if command_type == "playback":
+            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/player/command/from/{}/to/{}".format(self.device['device_id'], target_device)
+            r = self.fetch("POST", cmd_url, retry=False, json=command_payload)
+        elif command_type == "volume":
+            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/connect/volume/from/{}/to/{}".format(self.device['device_id'], target_device)
+            r = self.fetch("PUT", cmd_url, retry=False, json=command_payload)
 
-        URLS = {
-            "volume": {
-                "uri": SEND_VOL_COMMAND,
-                "method": "PUT",
-                "json": command
-            },
-            "playback": {
-                "uri": SEND_COMMAND,
-                "method": "POST",
-                "json": command
-            }
-        }
-
-        for device in self.user_devices:
-            if not device['can_play']:
-                break
-            URLS[cmd_type]["uri"] = URLS[cmd_type]["uri"].format(self.device['device_id'], device['id'])
-            res = self._request(**URLS[cmd_type])
-
-        return res
-
-    def send_command(self, command, *args):
+    def send_command(self, command, target_device, *args):
 
         if command in ["pause", "resume", "skip_next", "skip_prev"]:
             if len(args) != 0:
-                raise Exception("This command take no args, ex. ('resume') ")
-            self._dispatch_command("playback", { "command": { "endpoint": command }})
-            return
-        
-        if command == "volume":
+                raise Exception("This command take no args, ex. ('resume').")
+        else:
             if len(args) != 1:
-                raise Exception("You must provide an integer value in order to change volume, ex. ('volume', 3000) ")
-            self._dispatch_command("volume", {"volume": args[0]})
+                raise Exception("You must provide an integer value.")
 
-        if command == "seek_to":
-            if len(args) != 1:
-                raise Exception("You must provide an integer value in order to seek player position ex. ('seek_to', 5000) ")
-            self._dispatch_command("playback", {"command": {"endpoint": "seek_to", "value": args[0]}})
+        if not target_device:
+            raise Exception("You must provide a valid target_device to execute a command")
 
-        return
+        command_arg = args[0] if len(args) > 0 else None
+        command_type = "playback" if command in ["pause", "resume", "skip_next", "skip_prev", "seek_to"] else "volume"
+        available_commands = {
+            "pause":  {"command": {"endpoint": "pause"}},
+            "resume": {"command": {"endpoint": "resume"}},
+            "skip_next": {"command": {"endpoint": "skip_next"}},
+            "skip_prev": {"command": {"endpoint": "skip_prev"}},
+            "seek_to": {"command": {"endpoint": "seek_to", "value": command_arg}},
+            "volume": {"volume": command_arg},
+        }
+
+        self._dispatch_command(command_type, available_commands[command], target_device)
 
     def init(self):
         """Initialize main library modules

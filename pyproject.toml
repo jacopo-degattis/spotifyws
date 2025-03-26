@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spotifyws"
+version = "1.0.0"
+description = "A python wrapper for Spotify WebSockets"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Jacopo", email = "liljackx0@gmail.com" }]
+requires-python = ">=3.7"
+dependencies = [
+    "requests",
+    "beautifulsoup4",  # bs4 is actually BeautifulSoup4
+    "pyee",
+    "pycookiecheat",
+    "pydash",
+    "websocket-client",
+    "flask",
+    "flask-session",
+    "pyotp"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9"
+]
+
+[project.urls]
+Homepage = "https://github.com/jacopo-degattis/spotifyws"
+Download = "https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v.0.0.6.tar.gz"
