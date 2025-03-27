@@ -1,9 +1,0 @@
-requests
-beautifulsoup4
-pyee
-pycookiecheat
-pydash
-websocket-client
-flask
-flask-session
-pyotp

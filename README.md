@@ -16,7 +16,7 @@ Example using chrome cookies
 
 ```python
 
-from spotifyws.spotify import SpotifyWs
+from spotifyws import SpotifyWs
 
 client = SpotifyWs()
 
