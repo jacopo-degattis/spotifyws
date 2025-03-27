@@ -1,0 +1,14 @@
+LICENSE
+README.md
+pyproject.toml
+spotifyws/__init__.py
+spotifyws/config.py
+spotifyws/logger.py
+spotifyws/spotify.py
+spotifyws/utils.py
+spotifyws/ws.py
+spotifyws.egg-info/PKG-INFO
+spotifyws.egg-info/SOURCES.txt
+spotifyws.egg-info/dependency_links.txt
+spotifyws.egg-info/requires.txt
+spotifyws.egg-info/top_level.txt
