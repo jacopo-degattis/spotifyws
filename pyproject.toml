@@ -3,8 +3,8 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spotifyws"
-version = "1.0.0"
+name = "spotify-ws"
+version = "1.0.1"
 description = "A python wrapper for Spotify WebSockets"
 readme = "README.md"
 license = { text = "MIT" }
