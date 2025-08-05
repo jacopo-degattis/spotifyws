@@ -17,7 +17,7 @@ class WS(threading.Thread):
         self.event_emitter = spotify.event_emitter
         threading.Thread.__init__(self, name="websocket", daemon=True)
 
-    def _check_differences(self, keys, new_obj):
+    def _check_differences(self, keys, new_obj, override_key_path=None):
         """Check differences between previous and current object
 
         Given a list of nested keys, check if one of those fields
@@ -30,29 +30,28 @@ class WS(threading.Thread):
 
         """
 
-        EVENTS_MAPPING = {
+        key_path = override_key_path or "payloads.0.cluster.player_state.{}"
+        event_mapping = {
             "is_playing": "is_playing",
             "volume": "volume",
             "options": "playback_options",
-            "uri": "track",
+            "track.uri": "track",
         }
         
         for key in keys:
-            new_value = pydash.get(new_obj, key)
+            full_path = key_path.format(key)
+            new_value = pydash.get(new_obj, full_path)
+            old_value = pydash.get(self.previous_payload, full_path)
             
-            if pydash.get(self.previous_payload, key) != new_value:
-                # TODO: improve this condition
-                if key.split('.')[-1] == 'is_paused' and pydash.get(self.previous_payload, key) != new_value:
-                    emit_value = 'pause' if new_value else 'resume'
-                    self.event_emitter.emit(
-                        emit_value,
-                    )
-                else:
-                    self.event_emitter.emit(
-                        EVENTS_MAPPING[key.split('.')[-1]],
-                        new_value
-                    )
-                pydash.set_(self.previous_payload, key, new_value)
+            if old_value == new_value: continue
+            
+            if key == 'is_paused':
+                emit_value = 'pause' if new_value else 'resume'
+                self.event_emitter.emit(emit_value)
+            else:
+                self.event_emitter.emit(event_mapping[key], new_value)
+
+            pydash.set_(self.previous_payload, full_path, new_value)
             
     def _handle_device_state_changed(self, message):
         """Function to handle 'DEVICE_STATE_CHANGED'
@@ -68,11 +67,10 @@ class WS(threading.Thread):
         """
 
         keys = [
-            # TODO: is_playing, when does this event get triggered ?
-            "payloads.0.cluster.player_state.is_playing",
-            "payloads.0.cluster.player_state.is_paused" ,
-            "payloads.0.cluster.player_state.options",
-            "payloads.0.cluster.player_state.track.uri"
+            "is_playing",
+            "is_paused" ,
+            "options",
+            "track.uri"
         ]
 
         self._check_differences(keys, message)
@@ -93,11 +91,9 @@ class WS(threading.Thread):
         ACTIVE_DEVICE_PATH = "payloads.0.cluster.active_device_id"
         active_device = pydash.get(message, ACTIVE_DEVICE_PATH)
 
-        keys = [
-            f"payloads.0.cluster.devices.{active_device}.volume"
-        ]
+        keys = ["volume"]
 
-        self._check_differences(keys, message)
+        self._check_differences(keys, message, "payloads.0.cluster.devices.{}.{}".format(active_device, "{}"))
 
     def _handle_message(self, message):
         """Events dispatcher
@@ -123,7 +119,12 @@ class WS(threading.Thread):
         if not payloads:
             return message
 
-        reason = payloads[0].get('update_reason')
+        
+        reason = None
+        payload = payloads[0]
+
+        if type(payload) == dict:
+            reason = payload.get('update_reason')
 
         if not reason:
             return message

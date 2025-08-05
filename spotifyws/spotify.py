@@ -87,8 +87,21 @@ class SpotifyWs(object):
         
         return session
 
+    def _get_server_time(self):
+        response = requests.get(
+            GET_SERVER_TIME
+        )
+
+        if not response.status_code == 200:
+            raise Exception(f"failed while fetching server time with status code {response.status_code} and body {response.content}")
+
+        server_time = response.json()["serverTime"]
+
+        return server_time
+
     def get_access_token(self):
-        totp, _ = generate_totp()
+        server_time = self._get_server_time()
+        totp, _ = generate_totp(server_time=server_time)
 
         response = requests.get(
             GET_SPOTIFY_TOKEN,

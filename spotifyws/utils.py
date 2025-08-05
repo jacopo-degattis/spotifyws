@@ -4,18 +4,37 @@ import pyotp
 import hashlib
 import hmac
 
-# Credits for this secret and `generate_otp` function: https://github.com/kmille/deezer-downloader/blob/d4aefe23977d79e3f8eb41d731f1f0a37299b0ad/deezer_downloader/spotify.py
-SPOTIFY_TOTP_SECRET = bytearray([53, 53, 48, 55, 49, 52, 53, 56, 53, 51, 52, 56, 55, 52, 57, 57, 53, 57, 50, 50, 52, 56, 54, 51, 48, 51, 50, 57, 51, 52, 55])
+def get_latest_secret_key_version():
+    res = requests.get("https://raw.githubusercontent.com/Thereallo1026/spotify-secrets/refs/heads/main/secrets/secrets.json")
+
+    secrets = res.json()
+
+    if not secrets:
+        raise ValueError("Secret key list is empty.")
+
+    latest = secrets[-1]
+    original_secret = latest["secret"]
+    version = latest["version"]
+
+    if not isinstance(original_secret, str):
+        raise ValueError("The original secret must be a string.")
+
+    ascii_codes = [ord(c) for c in original_secret]
+    transformed = [(val ^ ((i % 33) + 9)) for i, val in enumerate(ascii_codes)]
+
+    transformed_str = ''.join(str(num) for num in transformed)
+    return transformed_str, version
 
 def generate_totp(
-    secret = SPOTIFY_TOTP_SECRET,
+    server_time,
     algorithm = hashlib.sha1,
     digits = 6,
-    counter_factory = lambda: int(time.time()) // 30,
 ):
-    counter = counter_factory()
+    secret, version = get_latest_secret_key_version()
+
+    counter = server_time // 30
     hmac_result = hmac.new(
-        secret, counter.to_bytes(8, byteorder="big"), algorithm
+        secret.encode(), counter.to_bytes(8, byteorder="big"), algorithm
     ).digest()
 
     offset = hmac_result[-1] & 15
