@@ -3,16 +3,18 @@ import time
 import pyotp
 import hashlib
 import hmac
+from .sec import extract_secrets
+
 
 def get_latest_secret_key_version():
-    res = requests.get("https://raw.githubusercontent.com/Thereallo1026/spotify-secrets/refs/heads/main/secrets/secrets.json")
 
-    secrets = res.json()
+    secrets = extract_secrets()
 
     if not secrets:
         raise ValueError("Secret key list is empty.")
 
     latest = secrets[-1]
+
     original_secret = latest["secret"]
     version = latest["version"]
 
@@ -22,15 +24,18 @@ def get_latest_secret_key_version():
     ascii_codes = [ord(c) for c in original_secret]
     transformed = [(val ^ ((i % 33) + 9)) for i, val in enumerate(ascii_codes)]
 
-    transformed_str = ''.join(str(num) for num in transformed)
+    transformed_str = "".join(str(num) for num in transformed)
     return transformed_str, version
+
 
 def generate_totp(
     server_time,
-    algorithm = hashlib.sha1,
-    digits = 6,
+    algorithm=hashlib.sha1,
+    digits=6,
 ):
-    secret, version = get_latest_secret_key_version()
+    # TODO: maybe add some kind of caching, so I can avoid fetching everytime for the last
+    # secrets, especially considering that using playwright slows things a lot.
+    secret, _ = get_latest_secret_key_version()
 
     counter = server_time // 30
     hmac_result = hmac.new(

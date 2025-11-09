@@ -10,6 +10,7 @@ from pycookiecheat import chrome_cookies
 from .logger import logger as logging
 from .utils import generate_totp
 
+
 class SpotifyWs(object):
     debug = None
     queue = None
@@ -25,8 +26,8 @@ class SpotifyWs(object):
         cookie_file=None,
     ):
         self.verbose = verbose
-        
-        self.connection_id = ''
+
+        self.connection_id = ""
         self.device = DEFAULT_DEVICE
         self.user_devices = []
 
@@ -37,7 +38,6 @@ class SpotifyWs(object):
 
         self.s = self._init_session()
         self.event_emitter = EventEmitter()
-        
         self.ws_socket = WS(self)
         self.ws_socket.start()
 
@@ -48,7 +48,9 @@ class SpotifyWs(object):
 
     def _load_cookies_from_file(self, cookie_file=None):
         if not cookie_file:
-            raise Exception("You must provide a file containing your browser session cookies.")
+            raise Exception(
+                "You must provide a file containing your browser session cookies."
+            )
 
         # TODO: handle file not existing error
         cookies = open(cookie_file, "r")
@@ -77,23 +79,21 @@ class SpotifyWs(object):
             'request' session object
 
         """
-        
+
         session = requests.Session()
-        session.headers.update({
-            "Authorization": f"Bearer {self.access_token}"
-        })
+        session.headers.update({"Authorization": f"Bearer {self.access_token}"})
 
         session.cookies.update(self.cookies)
-        
+
         return session
 
     def _get_server_time(self):
-        response = requests.get(
-            GET_SERVER_TIME
-        )
+        response = requests.get(GET_SERVER_TIME)
 
         if not response.status_code == 200:
-            raise Exception(f"failed while fetching server time with status code {response.status_code} and body {response.content}")
+            raise Exception(
+                f"failed while fetching server time with status code {response.status_code} and body {response.content}"
+            )
 
         server_time = response.json()["serverTime"]
 
@@ -106,14 +106,18 @@ class SpotifyWs(object):
         response = requests.get(
             GET_SPOTIFY_TOKEN,
             params={
-                "reason": 'init',
-                "productType": 'web-player',
+                "reason": "init",
+                "productType": "web-player",
                 "totp": totp,
                 "totpVer": 5,
-                "ts": int(time.time() * 1000)
+                "ts": int(time.time() * 1000),
             },
-            cookies=self.cookies
+            cookies=self.cookies,
         )
+
+        print("VALUE")
+        print(response.status_code)
+        print(response.content)
 
         return response.json()["accessToken"]
 
@@ -132,6 +136,7 @@ class SpotifyWs(object):
 
         def wrapper(method):
             return self.event_emitter.on(event)(method)
+
         return wrapper
 
     def add_listener(self, event, method):
@@ -177,14 +182,18 @@ class SpotifyWs(object):
 
         # TODO: it almost seems like it doesn't really matter if response status
         # code is 400 or 200
-        
-        self.s.put(f"{SUBSCRIBE_ACTIVITY}?connection_id={self.connection_id}", headers={
-            "referer": "https://open.spotify.com/",
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-origin",
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
-        }, data={})
+
+        self.s.put(
+            f"{SUBSCRIBE_ACTIVITY}?connection_id={self.connection_id}",
+            headers={
+                "referer": "https://open.spotify.com/",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+            },
+            data={},
+        )
 
     def _register_fake_device(self):
         """Register fake device
@@ -193,7 +202,7 @@ class SpotifyWs(object):
 
         Args: None
         Returns: request response as 'requests.models.Content'
-        
+
         """
 
         if self.verbose:
@@ -204,7 +213,7 @@ class SpotifyWs(object):
             "connection_id": self.connection_id,
             "device": self.device,
             "outro_endcontent_snooping": False,
-            "volume": 65535
+            "volume": 65535,
         }
 
         res = self.fetch(
@@ -246,7 +255,7 @@ class SpotifyWs(object):
                             "audio/track",
                             "audio/episode",
                             "video/episode",
-                            "mixed/episode"
+                            "mixed/episode",
                         ],
                         "needs_full_player_state": True,
                         "command_acks": True,
@@ -263,15 +272,17 @@ class SpotifyWs(object):
             "PUT",
             f"{CONNECT_STATE}hobs_{self.device['device_id']}",
             json=default_options,
-            headers={"x-spotify-connection-id": self.connection_id}
+            headers={"x-spotify-connection-id": self.connection_id},
         )
 
         for dev_id, dev_info in res.json()["devices"].items():
-            self.user_devices.append({
-                "id": dev_id,
-                "can_play": dev_info.get('can_play', False),
-                **dev_info,
-            })
+            self.user_devices.append(
+                {
+                    "id": dev_id,
+                    "can_play": dev_info.get("can_play", False),
+                    **dev_info,
+                }
+            )
 
         return res
 
@@ -284,14 +295,18 @@ class SpotifyWs(object):
             command_payload: Dictionary containing the command to dispatch
         Returns:
             HTTP request response
-        
+
         """
 
         if command_type == "playback":
-            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/player/command/from/{}/to/{}".format(self.device['device_id'], target_device)
+            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/player/command/from/{}/to/{}".format(
+                self.device["device_id"], target_device
+            )
             r = self.fetch("POST", cmd_url, retry=False, json=command_payload)
         elif command_type == "volume":
-            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/connect/volume/from/{}/to/{}".format(self.device['device_id'], target_device)
+            cmd_url = "https://gew1-spclient.spotify.com/connect-state/v1/connect/volume/from/{}/to/{}".format(
+                self.device["device_id"], target_device
+            )
             r = self.fetch("PUT", cmd_url, retry=False, json=command_payload)
 
     def send_command(self, command, target_device, *args):
@@ -304,12 +319,18 @@ class SpotifyWs(object):
                 raise Exception("You must provide an integer value.")
 
         if not target_device:
-            raise Exception("You must provide a valid target_device to execute a command")
+            raise Exception(
+                "You must provide a valid target_device to execute a command"
+            )
 
         command_arg = args[0] if len(args) > 0 else None
-        command_type = "playback" if command in ["pause", "resume", "skip_next", "skip_prev", "seek_to"] else "volume"
+        command_type = (
+            "playback"
+            if command in ["pause", "resume", "skip_next", "skip_prev", "seek_to"]
+            else "volume"
+        )
         available_commands = {
-            "pause":  {"command": {"endpoint": "pause"}},
+            "pause": {"command": {"endpoint": "pause"}},
             "resume": {"command": {"endpoint": "resume"}},
             "skip_next": {"command": {"endpoint": "skip_next"}},
             "skip_prev": {"command": {"endpoint": "skip_prev"}},

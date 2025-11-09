@@ -1,3 +1,5 @@
 spotify_ws.egg-info
 spotifyws.egg-info
 dist
+__pycache__
+spotifyws/__pycache__
