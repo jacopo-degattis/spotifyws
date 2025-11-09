@@ -34,4 +34,4 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/jacopo-degattis/spotifyws"
-Download = "https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v.1.1.1.tar.gz"
+Download = "https://github.com/jacopo-degattis/spotifyws/archive/refs/tags/v1.1.1.tar.gz"
